@@ -1,17 +1,11 @@
 #!/usr/bin/env python3
 
-# Libraries
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
-#import requests
-#from bs4 import BeautifulSoup
 from bs4 import BeautifulSoup as soup
-#import sys
-#import json
 from stop_words import get_stop_words
 from urllib.request import urlopen
 import feedparser
-import PySimpleGUI as sg
 import time
 from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import letter
@@ -20,11 +14,47 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 import collections
 import pandas as pd
-
+import os
 
 allArticles = []
-counter = int(0)
+counter = 0
 filename=''
+tmpdir=''
+Story=[]
+
+# Change RSSList and RSSNames for a different RSS list
+# NOTE: RSSList must match RSSNames
+RSSList = "https://www.ansa.it/sito/notizie/mondo/mondo_rss.xml"
+RSSList += ",http://xml2.corriereobjects.it/rss/economia.xml"
+RSSList += ",http://www.ansa.it/sito/notizie/topnews/topnews_rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/region/europe/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/region/americas/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/region/middle-east/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/region/africa/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/region/asia-pacific/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/health/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/culture-and-education/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/climate-change/feed/rss.xml"
+RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/economic-development/feed/rss.xml"
+
+RSSNames = "AnsaMondo"
+RSSNames += ",AnsaEconomia"
+RSSNames += ",AnsaTopNews"
+RSSNames += ",UNEurope"
+RSSNames += ",UNAmericas"
+RSSNames += ",UNMiddleEast"
+RSSNames += ",UNAfrica"
+RSSNames += ",UNAsiaPacific"
+RSSNames += ",UNhealth"
+RSSNames += ",UNCultureAndEducation"
+RSSNames += ",UNClimateChange"
+RSSNames += ",UNEconomicDevelopment"
+
+rssfeedlist=RSSList.split(",")
+rssfeednameslist=RSSNames.split(",")
+styles=getSampleStyleSheet()
+filename=''
+tmpdir=''
 
 class WhizRssAggregator():
     feedurl = ""
@@ -38,12 +68,16 @@ class WhizRssAggregator():
         output=''
 
         for thefeedentry in thefeed.entries:
-
             output += '{} '.format(thefeedentry.get("title", ""))
             allArticles.append(thefeedentry.get("title", ""))
             allArticles.append(thefeedentry.get("description", ""))
             allArticles.append('--------')
-
+        
+        global counter
+        global rssfeednameslist
+        global filename
+        global tmpdir
+        
         listOutput=output.split()
         filtered_output = [word for word in listOutput if word not in get_stop_words('italian')]
         string_filtered_output = ' '.join(filtered_output)
@@ -57,18 +91,19 @@ class WhizRssAggregator():
         plt.margins(x=0, y=0)
         plt.savefig(rssfeednameslist[counter]+'_'+filename+'.png')
 
-
 def googlenews():
     global filename
+    global Story
+    global styles
+    global filename
+    global tmpdir
     #GOOGLE NEWS
     news_url="https://news.google.com/news/rss"
     Client=urlopen(news_url)
     xml_page=Client.read()
     Client.close()
-    
     soup_page=soup(xml_page,"xml")
     news_list=soup_page.findAll("item")
-    
     output=''
     # Print news title, url and publish date
     for news in news_list:
@@ -92,69 +127,34 @@ def googlenews():
     plt.margins(x=0, y=0)
     plt.savefig('Google_news_'+filename+'.png')
 
-    #PDF
+    #Add to PDF
     im = Image('Google_news_'+filename+'.png', 0*inch, 0*inch)
     Story.append(im)
     Story.append(Paragraph('Google_news', styles["Normal"]))       
 
-# Add a touch of color
-sg.change_look_and_feel('DarkBrown1')
-
-RSSList = "https://www.ansa.it/sito/notizie/mondo/mondo_rss.xml"
-RSSList += ",http://xml2.corriereobjects.it/rss/economia.xml"
-RSSList += ",http://www.ansa.it/sito/notizie/topnews/topnews_rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/region/europe/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/region/americas/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/region/middle-east/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/region/africa/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/region/asia-pacific/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/health/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/culture-and-education/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/climate-change/feed/rss.xml"
-RSSList += ",https://news.un.org/feed/subscribe/en/news/topic/economic-development/feed/rss.xml"
-
-
-RSSNames = "AnsaMondo"
-RSSNames += ",AnsaEconomia"
-RSSNames += ",AnsaTopNews"
-RSSNames += ",UNEurope"
-RSSNames += ",UNAmericas"
-RSSNames += ",UNMiddleEast"
-RSSNames += ",UNAfrica"
-RSSNames += ",UNAsiaPacific"
-RSSNames += ",UNhealth"
-RSSNames += ",UNCultureAndEducation"
-RSSNames += ",UNClimateChange"
-RSSNames += ",UNEconomicDevelopment"
-
-
-
-
-# All the stuff inside your window.
-layout = [  [sg.Text('Feed RSS List')],[sg.Multiline(RSSList, size=(55,15))],
-            [sg.Text('Feed RSS Names')],[ sg.Multiline(RSSNames, size=(55,15))],
-            [sg.Button('Ok'), sg.Button('Cancel')] ]
-
-# Create the Window
-window = sg.Window('Zeitgeist', layout)
-# Event Loop to process "events" and get the "values" of the inputs
-while True:
-    event, values = window.read()
-    if event in (None, 'Cancel'):   # if user closes window or clicks cancel
-        break
-    #global filename
+def createReport():
+    global counter
+    global Story
+    global rssfeedlist
+    global rssfeednameslist
+    global styles
+    global filename
+    global tmpdir
     #PDF
     filename=time.strftime("%Y%m%d%H%M%S", time.localtime())
+    tmpdir=str('tmpdir_'+time.strftime("%Y%m%d%H%M%S", time.localtime()))
+    os.makedirs(tmpdir)
+    os.chdir(tmpdir)
+    
     fileTxt = open(filename+'_analyze_text.txt', 'a', encoding="utf-8")
     doc = SimpleDocTemplate(filename+".pdf",pagesize=letter,
                         rightMargin=72,leftMargin=72,
                         topMargin=72,bottomMargin=18)
-    Story=[]
-    styles=getSampleStyleSheet()
+    
     styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
-    rssfeedlist=values[0].replace("\n", "").split(",")
-    rssfeednameslist=values[1].replace("\n", "").split(",")
-    imZeitgeist = Image('Zeitgeist_small.png', 0*inch, 0*inch)
+    # The used image is under Creative Common license
+    # https://commons.wikimedia.org/wiki/File:Zeitgeist.jpg
+    imZeitgeist = Image('../Zeitgeist.jpg', 0*inch, 0*inch)
     Story.append(imZeitgeist)
     
     #GOOGLE NEWS
@@ -178,7 +178,7 @@ while True:
     fileExamine = open(filename+'_analyze_text.txt', encoding='utf8')
     a= fileExamine.read()
     # Stopwords
-    stopwords = set(line.strip() for line in open('stopwords.txt'))
+    stopwords = set(line.strip() for line in open('../stopwords.txt'))
     stopwords = stopwords.union(set(['mr','mrs','one','two','said']))
     # Instantiate a dictionary, and for every word in the file, 
     # Add to the dictionary if it doesn't exist. If it does, increase the count.
@@ -198,7 +198,7 @@ while True:
                 wordcount[word] = 1
             else:
                 wordcount[word] += 1
-    # Print most common word
+    # Print most common word (in this case the 30 most common words)
     n_print = int(30)
     print("\n The {} most common words are as follows\n".format(n_print))
     word_counter = collections.Counter(wordcount)
@@ -213,12 +213,12 @@ while True:
     anax=df.plot.bar(x='Word',y='Count')
     anax.figure.savefig('analyzedtext_'+filename+'.png', bbox_inches='tight')
     
-    #PDF
+    #Add to PDF
     imtxt = Image('analyzedtext'+'_'+filename+'.png', 0*inch, 0*inch)
     Story.append(imtxt)
-       
     doc.build(Story)
-    
     print('All done!')
-    break
-window.close()
+
+
+if __name__ == "__main__":
+    createReport()
